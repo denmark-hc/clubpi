@@ -1,7 +1,7 @@
 #!/bin/bash
-# Club Pi Member Setup Script (Fixed)
+# Club Pi Member Setup Script (Full Setup)
 # Usage: sudo ./setup_member.sh <username>
-# Example: sudo ./setup_member.sh oscar
+# Example: sudo ./setup_member.sh mig
 
 if [ "$EUID" -ne 0 ]; then
   echo "Run as root."
@@ -25,12 +25,12 @@ fi
 # 2. Set restricted shell
 chsh -s /bin/rbash "$USER"
 
-# 3. Create bin, work, and public folders
+# 3. Create necessary folders
 mkdir -p "$USERHOME/bin" "$USERHOME/work/public"
 chown -R "$USER:$GROUP" "$USERHOME/bin" "$USERHOME/work"
 
 # 4. Add default allowed commands
-for cmd in ls cat more less nano git python3 mkdir touch clear pwd realpath; do
+for cmd in ls cat more less nano git python3 mkdir touch clear pwd realpath bash; do
     CMD_PATH=$(which $cmd 2>/dev/null)
     if [ -x "$CMD_PATH" ]; then
         ln -sf "$CMD_PATH" "$USERHOME/bin/$cmd"
@@ -39,17 +39,18 @@ for cmd in ls cat more less nano git python3 mkdir touch clear pwd realpath; do
     fi
 done
 
-# 5. Ensure .bash_profile exists
-if [ ! -f "$USERHOME/.bash_profile" ]; then
-    touch "$USERHOME/.bash_profile"
-    chown "$USER:$GROUP" "$USERHOME/.bash_profile"
-fi
+# 5. Ensure .bash_profile and .bashrc exist
+for file in .bash_profile .bashrc; do
+    if [ ! -f "$USERHOME/$file" ]; then
+        touch "$USERHOME/$file"
+        chown "$USER:$GROUP" "$USERHOME/$file"
+    fi
+done
 
-# 6. Configure PATH
-grep -q 'PATH=$HOME/bin' "$USERHOME/.bash_profile" || echo 'PATH=$HOME/bin' >> "$USERHOME/.bash_profile"
-
-# 7. Add safe cd function to allow navigation inside home
-grep -q 'function cd()' "$USERHOME/.bash_profile" || cat >> "$USERHOME/.bash_profile" <<'EOF'
+# 6. Configure PATH and add safe cd function in both files
+for file in .bash_profile .bashrc; do
+    grep -q 'PATH=$HOME/bin' "$USERHOME/$file" || echo 'PATH=$HOME/bin' >> "$USERHOME/$file"
+    grep -q 'function cd()' "$USERHOME/$file" || cat >> "$USERHOME/$file" <<'EOF'
 function cd() {
   if [ -z "$1" ]; then
     builtin cd "$HOME"
@@ -62,19 +63,19 @@ function cd() {
     fi
   fi
 }
+cd $HOME
 EOF
+done
 
-# 8. Auto-start in home directory
-grep -q 'cd $HOME' "$USERHOME/.bash_profile" || echo 'cd $HOME' >> "$USERHOME/.bash_profile"
+chown "$USER:$GROUP" "$USERHOME/.bash_profile" "$USERHOME/.bashrc"
 
-chown "$USER:$GROUP" "$USERHOME/.bash_profile"
-
-# 9. Cleanup old test files
+# 7. Cleanup old test files
 rm -f "$USERHOME"/test* 2>/dev/null
 rm -f "$USERHOME"/*.tmp 2>/dev/null
 
-# 10. Create convenient symlink to work
+# 8. Create symlink for convenience
 ln -sf "$USERHOME/work" "$USERHOME/site"
 chown -h "$USER:$GROUP" "$USERHOME/site"
 
-echo "User $USER setup complete. Workspace: $USERHOME/work"
+echo "User $USER setup complete."
+echo "Workspace: $USERHOME/work"
