@@ -1,5 +1,5 @@
 #!/bin/bash
-# Club Pi Member Setup Script (Updated)
+# Club Pi Member Setup Script (Fixed)
 # Usage: sudo ./setup_member.sh <username>
 # Example: sudo ./setup_member.sh oscar
 
@@ -30,7 +30,7 @@ mkdir -p "$USERHOME/bin" "$USERHOME/work/public"
 chown -R "$USER:$GROUP" "$USERHOME/bin" "$USERHOME/work"
 
 # 4. Add default allowed commands
-for cmd in ls cat more less nano git python3 mkdir touch clear pwd; do
+for cmd in ls cat more less nano git python3 mkdir touch clear pwd realpath; do
     CMD_PATH=$(which $cmd 2>/dev/null)
     if [ -x "$CMD_PATH" ]; then
         ln -sf "$CMD_PATH" "$USERHOME/bin/$cmd"
@@ -45,16 +45,16 @@ if [ ! -f "$USERHOME/.bash_profile" ]; then
     chown "$USER:$GROUP" "$USERHOME/.bash_profile"
 fi
 
-# 6. Configure PATH and safe cd inside home
+# 6. Configure PATH
 grep -q 'PATH=$HOME/bin' "$USERHOME/.bash_profile" || echo 'PATH=$HOME/bin' >> "$USERHOME/.bash_profile"
 
-# Custom function to allow cd anywhere inside home
+# 7. Add safe cd function to allow navigation inside home
 grep -q 'function cd()' "$USERHOME/.bash_profile" || cat >> "$USERHOME/.bash_profile" <<'EOF'
 function cd() {
   if [ -z "$1" ]; then
     builtin cd "$HOME"
   else
-    TARGET="$HOME/$1"
+    TARGET=$(realpath -m "$1")
     if [[ "$TARGET" == "$HOME"* && -d "$TARGET" ]]; then
       builtin cd "$TARGET"
     else
@@ -64,16 +64,16 @@ function cd() {
 }
 EOF
 
-# Auto-start in home directory
+# 8. Auto-start in home directory
 grep -q 'cd $HOME' "$USERHOME/.bash_profile" || echo 'cd $HOME' >> "$USERHOME/.bash_profile"
 
 chown "$USER:$GROUP" "$USERHOME/.bash_profile"
 
-# 7. Cleanup test files
+# 9. Cleanup old test files
 rm -f "$USERHOME"/test* 2>/dev/null
 rm -f "$USERHOME"/*.tmp 2>/dev/null
 
-# 8. Create convenient symlink to work
+# 10. Create convenient symlink to work
 ln -sf "$USERHOME/work" "$USERHOME/site"
 chown -h "$USER:$GROUP" "$USERHOME/site"
 
