@@ -34,4 +34,4 @@ echo "[Club Pi] Boot setup complete!"
 
 
 
-Make 
+Mak
