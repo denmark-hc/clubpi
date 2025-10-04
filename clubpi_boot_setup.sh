@@ -32,6 +32,3 @@ apt install -y caddy
 
 echo "[Club Pi] Boot setup complete!"
 
-
-
-Mak
