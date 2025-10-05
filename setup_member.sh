@@ -52,16 +52,6 @@ EOF
     chown "$USER:$GROUP" "$USERHOME/.bash_profile"
 fi
 
-# 5. Add site to Caddy config
-SITE_CONFIG="http://clubpi.local/$USER {
-    root * $USERHOME/work/public
-    file_server
-}"
-echo "$SITE_CONFIG" >> /etc/caddy/Caddyfile
-
-# 6. Reload Caddy automatically
-systemctl reload caddy
 
 echo "✅ Member $USER setup complete."
 echo "Workspace: $USERHOME/work/public"
-echo "Site: http://clubpi.local/$USER"
