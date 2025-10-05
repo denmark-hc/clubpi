@@ -18,5 +18,8 @@ apt install git -y
 # --- 3. Create members group ---
 getent group members >/dev/null || groupadd members
 
+#-----4.install member setup-------
+curl -o ~/setup_member.sh https://raw.githubusercontent.com/denmark-hc/clubpi/main/setup_member.shchmod +x ~/setup_member.sh
+
 echo "✅ Club Pi boot setup complete."
 echo "Default site available at: http://clubpi.local"
