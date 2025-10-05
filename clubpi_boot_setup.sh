@@ -13,13 +13,15 @@ echo "🚀 Starting Club Pi boot setup..."
 apt update && apt upgrade -y
 
 # --- 2. Install Git ---
-apt install git -y
+apt install -y git
 
 # --- 3. Create members group ---
 getent group members >/dev/null || groupadd members
 
-#-----4.install member setup-------
-curl -o ~/setup_member.sh https://raw.githubusercontent.com/denmark-hc/clubpi/refs/heads/main/setup_member.sh +x ~/setup_member.sh
+# --- 4. Install member setup script ---
+curl -o /home/$SUDO_USER/setup_member.sh https://raw.githubusercontent.com/denmark-hc/clubpi/refs/heads/main/setup_member.sh
+chmod +x /home/$SUDO_USER/setup_member.sh
+chown $SUDO_USER:$SUDO_USER /home/$SUDO_USER/setup_member.sh
 
 echo "✅ Club Pi boot setup complete."
-echo "Default site available at: http://clubpi.local"
+echo "Member setup script saved at: ~/setup_member.sh"
