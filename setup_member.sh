@@ -1,5 +1,5 @@
 #!/bin/bash
-# Club Pi Member Setup Script (Folders + Optional Caddy Block)
+# Club Pi Member Setup Script
 # Usage: sudo ./setup_member.sh <username>
 
 if [ "$EUID" -ne 0 ]; then
@@ -16,36 +16,52 @@ USER=$1
 GROUP=members
 USERHOME="/home/$USER"
 
-# --- 1. Add user to members group ---
-if ! id -nG "$USER" | grep -qw "$GROUP"; then
-    usermod -aG "$GROUP" "$USER"
+echo "👤 Setting up member: $USER"
+
+# 1. Add user if missing
+if ! id "$USER" &>/dev/null; then
+    useradd -m -s /bin/rbash -G "$GROUP" "$USER"
+    echo "$USER:changeme" | chpasswd
 fi
 
-# --- 2. Create work and public folders ---
+# 2. Create workspace
 mkdir -p "$USERHOME/work/public"
 chown -R "$USER:$GROUP" "$USERHOME/work"
 
-# --- 3. Symlink for convenience ---
-ln -sf "$USERHOME/work" "$USERHOME/site"
-chown -h "$USER:$GROUP" "$USERHOME/site"
+# 3. Ensure restricted shell
+chsh -s /bin/rbash "$USER"
 
-# --- 4. Optional: Add basic Caddy block (leader can adjust Unix socket) ---
-CADDYFILE="/etc/caddy/Caddyfile"
-SOCKET="/home/$USER/.caddy/$USER.sock"
-sudo mkdir -p "/home/$USER/.caddy"
-sudo touch "$SOCKET"
-sudo chown "$USER:$GROUP" "$SOCKET"
-
-MEMBER_BLOCK="http://$USER.clubpi.local {\n    bind unix//$SOCKET|777\n    root * $USERHOME/work/public\n    file_server\n}\n"
-
-if ! grep -q "http://$USER.clubpi.local" "$CADDYFILE" 2>/dev/null; then
-    echo -e "$MEMBER_BLOCK" >> "$CADDYFILE"
-    systemctl reload caddy
-    echo "✅ Added Caddy block for $USER at http://$USER.clubpi.local"
+# 4. Add safe cd function in .bash_profile
+if [ ! -f "$USERHOME/.bash_profile" ]; then
+    cat > "$USERHOME/.bash_profile" <<'EOF'
+PATH=$HOME/bin
+function cd() {
+  if [ -z "$1" ]; then
+    builtin cd "$HOME"
+  else
+    TARGET=$(realpath -m "$1")
+    if [[ "$TARGET" == "$HOME"* && -d "$TARGET" ]]; then
+      builtin cd "$TARGET"
+    else
+      echo "Restricted: cannot cd outside home."
+    fi
+  fi
+}
+cd $HOME
+EOF
+    chown "$USER:$GROUP" "$USERHOME/.bash_profile"
 fi
 
-echo "✅ User $USER setup complete!"
-echo "Workspace: $USERHOME/work"
-echo "Public folder served via Caddy: $USERHOME/work/public"
-echo "Symlink for convenience: $USERHOME/site"
-echo "Members can safely create folders and files inside their home."
+# 5. Add site to Caddy config
+SITE_CONFIG="http://clubpi.local/$USER {
+    root * $USERHOME/work/public
+    file_server
+}"
+echo "$SITE_CONFIG" >> /etc/caddy/Caddyfile
+
+# 6. Reload Caddy automatically
+systemctl reload caddy
+
+echo "✅ Member $USER setup complete."
+echo "Workspace: $USERHOME/work/public"
+echo "Site: http://clubpi.local/$USER"
