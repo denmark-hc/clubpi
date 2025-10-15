@@ -31,10 +31,20 @@ chown -R "$USER:$GROUP" "$USERHOME/work"
 # 3. Ensure restricted shell
 chsh -s /bin/rbash "$USER"
 
-# 4. Add safe cd function in .bash_profile
+# 4. Create bin folder and symlink safe commands
+mkdir -p "$USERHOME/bin"
+for cmd in bash git mkdir ls cat nano touch rm cp mv; do
+    if command -v $cmd &>/dev/null; then
+        ln -s "$(command -v $cmd)" "$USERHOME/bin/$cmd"
+    fi
+done
+
+# 5. Add safe cd function in .bash_profile
 if [ ! -f "$USERHOME/.bash_profile" ]; then
     cat > "$USERHOME/.bash_profile" <<'EOF'
 PATH=$HOME/bin
+export PATH
+
 function cd() {
   if [ -z "$1" ]; then
     builtin cd "$HOME"
@@ -47,11 +57,11 @@ function cd() {
     fi
   fi
 }
+
 cd $HOME
 EOF
-    chown "$USER:$GROUP" "$USERHOME/.bash_profile"
+    chown -R "$USER:$GROUP" "$USERHOME/.bash_profile" "$USERHOME/bin"
 fi
-
 
 echo "✅ Member $USER setup complete."
 echo "Workspace: $USERHOME/work/public"
